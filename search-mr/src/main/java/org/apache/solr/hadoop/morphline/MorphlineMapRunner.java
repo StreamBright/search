@@ -69,35 +69,35 @@ public final class MorphlineMapRunner {
   private Map<String, String> commandLineMorphlineHeaders;
   private boolean disableFileOpen;
   private String morphlineFileAndId;
-  private final Timer elapsedTime;   
-  
+  private final Timer elapsedTime;
+
   public static final String MORPHLINE_FILE_PARAM = "morphlineFile";
   public static final String MORPHLINE_ID_PARAM = "morphlineId";
-  
+
   /**
    * Morphline variables can be passed from the CLI to the Morphline, e.g.:
    * hadoop ... -D morphlineVariable.zkHost=127.0.0.1:2181/solr
    */
   public static final String MORPHLINE_VARIABLE_PARAM = "morphlineVariable";
-  
+
   /**
    * Headers, including MIME types, can also explicitly be passed by force from the CLI to Morphline, e.g:
    * hadoop ... -D morphlineField._attachment_mimetype=text/csv
    */
   public static final String MORPHLINE_FIELD_PREFIX = "morphlineField.";
-  
+
   /**
-   * Flag to disable reading of file contents if indexing just file metadata is sufficient. 
+   * Flag to disable reading of file contents if indexing just file metadata is sufficient.
    * This improves performance and confidentiality.
    */
   public static final String DISABLE_FILE_OPEN = "morphlineDisableFileOpen";
-  
+
   private static final Logger LOG = LoggerFactory.getLogger(MorphlineMapRunner.class);
-  
+
   MorphlineContext getMorphlineContext() {
     return morphlineContext;
   }
-  
+
   IndexSchema getSchema() {
     return schema;
   }
@@ -111,19 +111,19 @@ public final class MorphlineMapRunner {
       }
       LOG.trace("Configuration:\n{}", Joiner.on("\n").join(map.entrySet()));
     }
-    
+
     if (LOG.isTraceEnabled()) {
       TreeMap map = new TreeMap(System.getProperties());
       LOG.trace("Java System Properties:\n{}", Joiner.on("\n").join(map.entrySet()));
       LOG.trace("JVM Arguments: {}", ManagementFactory.getRuntimeMXBean().getInputArguments());
     }
-    
+
     FaultTolerance faultTolerance = new FaultTolerance(
-        configuration.getBoolean(FaultTolerance.IS_PRODUCTION_MODE, false), 
+        configuration.getBoolean(FaultTolerance.IS_PRODUCTION_MODE, false),
         configuration.getBoolean(FaultTolerance.IS_IGNORING_RECOVERABLE_EXCEPTIONS, false),
-        configuration.get(FaultTolerance.RECOVERABLE_EXCEPTION_CLASSES, SolrServerException.class.getName())        
+        configuration.get(FaultTolerance.RECOVERABLE_EXCEPTION_CLASSES, SolrServerException.class.getName())
         );
-    
+
     morphlineContext = new SolrMorphlineContext.Builder()
       .setDocumentLoader(loader)
       .setExceptionHandler(faultTolerance)
@@ -163,12 +163,12 @@ public final class MorphlineMapRunner {
     Config override = ConfigFactory.parseMap(morphlineVariables);
     morphline = new Compiler().compile(new File(morphlineFile), morphlineId, morphlineContext, null, override);
     morphlineFileAndId = morphlineFile + "@" + morphlineId;
-    
+
     disableFileOpen = configuration.getBoolean(DISABLE_FILE_OPEN, false);
     LOG.debug("disableFileOpen: {}", disableFileOpen);
-        
+
     commandLineMorphlineHeaders = new HashMap();
-    for (Map.Entry<String,String> entry : configuration) {     
+    for (Map.Entry<String,String> entry : configuration) {
       if (entry.getKey().startsWith(MORPHLINE_FIELD_PREFIX)) {
         commandLineMorphlineHeaders.put(entry.getKey().substring(MORPHLINE_FIELD_PREFIX.length()), entry.getValue());
       }
@@ -225,7 +225,7 @@ public final class MorphlineMapRunner {
       }
     }
   }
-  
+
   protected Record getRecord(PathParts parts) {
     FileStatus stats;
     try {
@@ -238,30 +238,30 @@ public final class MorphlineMapRunner {
           parts.getUploadURL());
       return null;
     }
-    
+
     Record headers = new Record();
     //headers.put(getSchema().getUniqueKeyField().getName(), parts.getId()); // use HDFS file path as docId if no docId is specified
     headers.put(Fields.BASE_ID, parts.getId()); // with sanitizeUniqueKey command, use HDFS file path as docId if no docId is specified
     headers.put(Fields.ATTACHMENT_NAME, parts.getName()); // Tika can use the file name in guessing the right MIME type
-    
+
     // enable indexing and storing of file meta data in Solr
-    headers.put(HdfsFileFieldNames.FILE_UPLOAD_URL, parts.getUploadURL());
-    headers.put(HdfsFileFieldNames.FILE_DOWNLOAD_URL, parts.getDownloadURL());
-    headers.put(HdfsFileFieldNames.FILE_SCHEME, parts.getScheme()); 
-    headers.put(HdfsFileFieldNames.FILE_HOST, parts.getHost()); 
-    headers.put(HdfsFileFieldNames.FILE_PORT, String.valueOf(parts.getPort())); 
-    headers.put(HdfsFileFieldNames.FILE_PATH, parts.getURIPath()); 
-    headers.put(HdfsFileFieldNames.FILE_NAME, parts.getName());     
-    headers.put(HdfsFileFieldNames.FILE_LAST_MODIFIED, String.valueOf(stats.getModificationTime())); // FIXME also add in SpoolDirectorySource
-    headers.put(HdfsFileFieldNames.FILE_LENGTH, String.valueOf(stats.getLen())); // FIXME also add in SpoolDirectorySource
-    headers.put(HdfsFileFieldNames.FILE_OWNER, stats.getOwner());
-    headers.put(HdfsFileFieldNames.FILE_GROUP, stats.getGroup());
-    headers.put(HdfsFileFieldNames.FILE_PERMISSIONS_USER, stats.getPermission().getUserAction().SYMBOL);
-    headers.put(HdfsFileFieldNames.FILE_PERMISSIONS_GROUP, stats.getPermission().getGroupAction().SYMBOL);
-    headers.put(HdfsFileFieldNames.FILE_PERMISSIONS_OTHER, stats.getPermission().getOtherAction().SYMBOL);
-    headers.put(HdfsFileFieldNames.FILE_PERMISSIONS_STICKYBIT, String.valueOf(stats.getPermission().getStickyBit()));
+    //headers.put(HdfsFileFieldNames.FILE_UPLOAD_URL, parts.getUploadURL());
+    //headers.put(HdfsFileFieldNames.FILE_DOWNLOAD_URL, parts.getDownloadURL());
+    //headers.put(HdfsFileFieldNames.FILE_SCHEME, parts.getScheme());
+    //headers.put(HdfsFileFieldNames.FILE_HOST, parts.getHost());
+    //headers.put(HdfsFileFieldNames.FILE_PORT, String.valueOf(parts.getPort()));
+    //headers.put(HdfsFileFieldNames.FILE_PATH, parts.getURIPath());
+    //headers.put(HdfsFileFieldNames.FILE_NAME, parts.getName());
+    //headers.put(HdfsFileFieldNames.FILE_LAST_MODIFIED, String.valueOf(stats.getModificationTime())); // FIXME also add in SpoolDirectorySource
+    //headers.put(HdfsFileFieldNames.FILE_LENGTH, String.valueOf(stats.getLen())); // FIXME also add in SpoolDirectorySource
+    //headers.put(HdfsFileFieldNames.FILE_OWNER, stats.getOwner());
+    //headers.put(HdfsFileFieldNames.FILE_GROUP, stats.getGroup());
+    //headers.put(HdfsFileFieldNames.FILE_PERMISSIONS_USER, stats.getPermission().getUserAction().SYMBOL);
+    //headers.put(HdfsFileFieldNames.FILE_PERMISSIONS_GROUP, stats.getPermission().getGroupAction().SYMBOL);
+    //headers.put(HdfsFileFieldNames.FILE_PERMISSIONS_OTHER, stats.getPermission().getOtherAction().SYMBOL);
+    //headers.put(HdfsFileFieldNames.FILE_PERMISSIONS_STICKYBIT, String.valueOf(stats.getPermission().getStickyBit()));
     // TODO: consider to add stats.getAccessTime(), stats.getReplication(), stats.isSymlink(), stats.getBlockSize()
-    
+
     return headers;
   }
 
